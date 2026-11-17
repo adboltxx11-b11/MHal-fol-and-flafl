@@ -1,0 +1,1982 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>محاكي الفول والمطاعم 3D - نظام حفظ متكامل</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Cairo', sans-serif;
+    user-select: none;
+  }
+
+  body {
+    background: #120905;
+    color: #fff;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ================= شاشة الاستقبال (MAIN MENU) ================= */
+  #launcher-screen {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at center, #3b1e10 0%, #0d0603 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .launcher-card {
+    background: rgba(25, 14, 8, 0.94);
+    border: 3px solid #f59e0b;
+    border-radius: 26px;
+    padding: 26px 32px;
+    max-width: 650px;
+    width: 100%;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(245, 158, 11, 0.35);
+    backdrop-filter: blur(12px);
+  }
+
+  .game-badge {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    color: #1a120b;
+    font-weight: 900;
+    padding: 4px 16px;
+    border-radius: 50px;
+    font-size: 0.88rem;
+    display: inline-block;
+    margin-bottom: 8px;
+  }
+
+  .launcher-title {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #fbbf24;
+    text-shadow: 0 4px 15px rgba(245, 158, 11, 0.5);
+    margin-bottom: 6px;
+  }
+
+  .launcher-sub {
+    color: #e5e7eb;
+    font-size: 0.94rem;
+    margin-bottom: 18px;
+  }
+
+  .os-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .os-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px solid rgba(255, 255, 255, 0.18);
+    border-radius: 14px;
+    padding: 11px 6px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+
+  .os-btn:hover { background: rgba(245, 158, 11, 0.2); border-color: #f59e0b; transform: translateY(-2px); }
+  .os-btn.selected { background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #fef3c7; color: #1a120b; font-weight: 900; }
+  .os-icon { font-size: 1.6rem; }
+
+  .menu-buttons-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .main-action-btn {
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 13px 24px;
+    font-size: 1.15rem;
+    font-weight: 900;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .btn-start-new {
+    background: linear-gradient(90deg, #10b981, #059669);
+    box-shadow: 0 8px 22px rgba(16, 185, 129, 0.4);
+  }
+  .btn-start-new:hover:not(:disabled) { transform: scale(1.02); filter: brightness(1.08); }
+
+  .btn-load-game {
+    background: linear-gradient(90deg, #3b82f6, #2563eb);
+    box-shadow: 0 8px 22px rgba(59, 130, 246, 0.4);
+  }
+  .btn-load-game:hover:not(:disabled) { transform: scale(1.02); filter: brightness(1.08); }
+
+  .main-action-btn:disabled {
+    background: #4b5563;
+    cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.6;
+  }
+
+  .save-info-badge {
+    font-size: 0.82rem;
+    color: #93c5fd;
+    margin-top: 2px;
+  }
+
+  .progress-container { display: none; margin-top: 15px; text-align: right; }
+  .progress-info { display: flex; justify-content: space-between; font-size: 0.88rem; color: #fbbf24; margin-bottom: 5px; font-weight: 700; }
+  .progress-bar-bg { width: 100%; height: 13px; background: rgba(255, 255, 255, 0.12); border-radius: 50px; overflow: hidden; border: 1px solid #f59e0b; }
+  .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #f59e0b, #10b981); border-radius: 50px; transition: width 0.15s linear; }
+
+  /* ================= شاشة اللعبة الرئيسية ================= */
+  #game-screen {
+    display: none;
+    height: 100vh;
+    width: 100vw;
+    position: relative;
+  }
+
+  #canvas-container {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    cursor: grab;
+  }
+  #canvas-container:active { cursor: grabbing; }
+
+  .top-hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(180deg, rgba(18, 10, 4, 0.95) 0%, rgba(18, 10, 4, 0.72) 100%);
+    border-bottom: 2px solid #f59e0b;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 20;
+    backdrop-filter: blur(6px);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .stats-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  .stat-pill {
+    background: rgba(0, 0, 0, 0.65);
+    border: 2px solid #f59e0b;
+    padding: 4px 11px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 900;
+    font-size: 0.92rem;
+  }
+
+  .stat-pill.money { border-color: #10b981; color: #34d399; }
+  .stat-pill.coins { border-color: #fbbf24; color: #fbbf24; }
+  .stat-pill.place { border-color: #60a5fa; color: #93c5fd; }
+  .stat-pill.counter { border-color: #ec4899; color: #f472b6; background: rgba(236, 72, 153, 0.15); }
+
+  .hud-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .hud-btn {
+    border: none;
+    border-radius: 10px;
+    padding: 7px 11px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .hud-btn:hover { transform: scale(1.05); }
+  .hud-btn.shop-btn { background: linear-gradient(135deg, #f59e0b, #ea580c); color: #fff; }
+  .hud-btn.price-btn { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
+  .hud-btn.pause-btn { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
+  .hud-btn.sound-btn { background: #374151; color: #fff; }
+
+  .look-hint {
+    position: absolute;
+    top: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.55);
+    color: #fde68a;
+    padding: 3px 14px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    z-index: 12;
+    pointer-events: none;
+  }
+
+  .customers-overlay {
+    position: absolute;
+    top: 84px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    z-index: 15;
+    pointer-events: none;
+    padding: 0 12px;
+  }
+
+  .customer-card {
+    pointer-events: auto;
+    width: 190px;
+    background: rgba(255, 251, 235, 0.96);
+    color: #1f2937;
+    border-radius: 16px;
+    padding: 9px 11px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.55);
+    border: 3px solid #f59e0b;
+    animation: popIn 0.3s ease;
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.7) translateY(-15px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+  }
+
+  .cust-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-weight: 900;
+    color: #78350f;
+    font-size: 0.92rem;
+  }
+
+  .cust-order-box {
+    background: #fef3c7;
+    border: 1.5px dashed #d97706;
+    border-radius: 10px;
+    padding: 5px;
+    margin: 5px 0;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: #92400e;
+  }
+
+  .patience-bar {
+    width: 100%;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+
+  .patience-fill {
+    height: 100%;
+    background: #10b981;
+    width: 100%;
+    transition: width 0.25s linear, background 0.3s;
+  }
+
+  .serve-btn {
+    width: 100%;
+    background: linear-gradient(90deg, #10b981, #059669);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 6px;
+    font-weight: 900;
+    cursor: pointer;
+    font-size: 0.84rem;
+    box-shadow: 0 3px 8px rgba(16, 185, 129, 0.4);
+  }
+
+  .serve-btn:hover { filter: brightness(1.1); transform: scale(1.02); }
+
+  .bottom-dock {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(0deg, rgba(20, 10, 4, 0.96) 0%, rgba(20, 10, 4, 0.84) 100%);
+    border-top: 3px solid #f59e0b;
+    padding: 10px 16px;
+    display: grid;
+    grid-template-columns: 1fr 1.8fr 1fr;
+    gap: 12px;
+    height: 35vh;
+    min-height: 220px;
+    z-index: 20;
+    backdrop-filter: blur(8px);
+  }
+
+  .panel-box {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1.5px solid rgba(245, 158, 11, 0.35);
+    border-radius: 14px;
+    padding: 9px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .panel-title {
+    font-size: 0.92rem;
+    font-weight: 900;
+    color: #fbbf24;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(245, 158, 11, 0.25);
+    padding-bottom: 4px;
+  }
+
+  .inventory-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .inv-item {
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 5px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+  }
+  .inv-count {
+    background: #f59e0b;
+    color: #1a120b;
+    font-weight: 900;
+    padding: 1px 7px;
+    border-radius: 50px;
+    font-size: 0.76rem;
+  }
+
+  .menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
+  .food-card {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(180, 83, 9, 0.24));
+    border: 1.5px solid #f59e0b;
+    border-radius: 10px;
+    padding: 6px 9px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .food-card:hover:not(.locked) { transform: translateY(-2px); background: linear-gradient(135deg, rgba(245, 158, 11, 0.35), rgba(180, 83, 9, 0.4)); }
+  .food-card.locked { opacity: 0.45; cursor: not-allowed; border-color: #6b7280; }
+  .food-top { display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 0.84rem; }
+  .food-price-tag { background: #10b981; color: #fff; padding: 1px 6px; border-radius: 6px; font-size: 0.74rem; }
+  .food-req { font-size: 0.69rem; color: #fcd34d; margin-top: 2px; }
+
+  .ready-tray { display: flex; flex-direction: column; gap: 6px; }
+  .tray-slot {
+    background: rgba(0,0,0,0.5);
+    border: 1.5px dashed #fbbf24;
+    border-radius: 8px;
+    padding: 6px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    font-size: 0.82rem;
+  }
+  .trash-btn { background: #ef4444; color: #fff; border: none; border-radius: 5px; padding: 2px 7px; cursor: pointer; font-size: 0.72rem; }
+
+  /* ================= شاشة الإيقاف المؤقت (PAUSE OVERLAY) ================= */
+  #pause-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 5, 2, 0.88);
+    z-index: 800;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    padding: 20px;
+  }
+
+  .pause-card {
+    background: #24130a;
+    border: 3px solid #f59e0b;
+    border-radius: 24px;
+    padding: 28px 32px;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+  }
+
+  .pause-title {
+    font-size: 1.85rem;
+    font-weight: 900;
+    color: #fbbf24;
+    margin-bottom: 8px;
+  }
+
+  .pause-desc {
+    color: #d1d5db;
+    font-size: 0.92rem;
+    margin-bottom: 18px;
+  }
+
+  .save-code-box {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1.5px dashed #60a5fa;
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 16px;
+    text-align: right;
+  }
+
+  .save-code-input {
+    width: 100%;
+    background: #111827;
+    color: #34d399;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 0.78rem;
+    font-family: monospace;
+    margin-top: 6px;
+    user-select: text;
+    direction: ltr;
+  }
+
+  .copy-code-btn {
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-weight: 800;
+    font-size: 0.82rem;
+    cursor: pointer;
+    margin-top: 8px;
+    width: 100%;
+  }
+
+  .resume-btn {
+    background: linear-gradient(90deg, #10b981, #059669);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 13px 24px;
+    font-size: 1.15rem;
+    font-weight: 900;
+    cursor: pointer;
+    width: 100%;
+    margin-bottom: 10px;
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+  }
+
+  .save-exit-btn {
+    background: #374151;
+    color: #fff;
+    border: 1.5px solid #9ca3af;
+    border-radius: 12px;
+    padding: 10px 20px;
+    font-size: 0.96rem;
+    font-weight: 800;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  /* ================= النوافذ المنبثقة ================= */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 1200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(5px);
+  }
+
+  .modal-box {
+    background: #24130a;
+    border: 3px solid #f59e0b;
+    border-radius: 20px;
+    max-width: 720px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 22px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.85);
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid rgba(245, 158, 11, 0.3);
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+  }
+
+  .modal-title { font-size: 1.3rem; font-weight: 900; color: #fbbf24; }
+  .close-modal { background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-weight: 800; cursor: pointer; }
+  .shop-section-title { color: #34d399; font-weight: 800; margin: 12px 0 8px; font-size: 1.02rem; }
+  .shop-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+  .shop-item {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1.5px solid rgba(245, 158, 11, 0.4);
+    border-radius: 12px;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .buy-btn { background: #f59e0b; color: #1a120b; border: none; border-radius: 8px; padding: 6px 12px; font-weight: 900; cursor: pointer; }
+  .price-row { background: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .price-controls { display: flex; align-items: center; gap: 8px; }
+  .adj-btn { background: #3b82f6; color: #fff; border: none; width: 28px; height: 28px; border-radius: 7px; font-weight: 900; cursor: pointer; }
+
+  #toast-container {
+    position: fixed;
+    top: 75px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1500;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
+  }
+
+  .toast {
+    background: rgba(17, 24, 39, 0.95);
+    border: 2px solid #f59e0b;
+    color: #fff;
+    padding: 7px 18px;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 0.9rem;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<!-- ==================== 1. قائمة الاستقبال (Start Game & Load Game) ==================== -->
+<div id="launcher-screen">
+  <div class="launcher-card">
+    <div class="game-badge">🇪🇬 إصدار 3D منظور الشخص الأول (حفظ ذكي + كود نقل)</div>
+    <h1 class="launcher-title">أسطورة الفول والمطاعم 3D</h1>
+    <p class="launcher-sub">اقف جوه عربية الفول بنفسك! تقدمك بيتحفظ تلقائياً + تقدر تنسخ كود الحفظ لأي نيو تاب.</p>
+
+    <div style="text-align: right; font-weight: 800; color: #fbbf24; margin-bottom: 8px;">
+      اختر نظام التشغيل أولاً:
+    </div>
+
+    <div class="os-grid">
+      <div class="os-btn" onclick="selectOS('Windows', this)">
+        <span class="os-icon">🪟</span>
+        <span>Windows</span>
+      </div>
+      <div class="os-btn" onclick="selectOS('Android', this)">
+        <span class="os-icon">🤖</span>
+        <span>Android</span>
+      </div>
+      <div class="os-btn" onclick="selectOS('iOS', this)">
+        <span class="os-icon">📱</span>
+        <span>iOS</span>
+      </div>
+      <div class="os-btn" onclick="selectOS('macOS', this)">
+        <span class="os-icon">🍎</span>
+        <span>macOS</span>
+      </div>
+    </div>
+
+    <div class="menu-buttons-stack">
+      <button id="start-game-btn" class="main-action-btn btn-start-new" disabled onclick="launchSequence('new')">
+        <span>▶️</span>
+        <span id="start-btn-text">Start Game (ابدأ من جديد)</span>
+      </button>
+
+      <button id="load-game-btn" class="main-action-btn btn-load-game" disabled onclick="handleLoadGameClick()">
+        <span>📂</span>
+        <span id="load-btn-text">Load Game (تحميل آخر لعبة)</span>
+      </button>
+      <div id="save-status-label" class="save-info-badge"></div>
+    </div>
+
+    <div id="progress-container" class="progress-container">
+      <div class="progress-info">
+        <span id="download-status">جاري تجهيز المطبخ والـ 3D...</span>
+        <span id="download-percent">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div id="progress-bar-fill" class="progress-bar-fill"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 2. شاشة اللعبة 3D ==================== -->
+<div id="game-screen">
+  <div id="canvas-container"></div>
+
+  <!-- الشريط العلوي -->
+  <div class="top-hud">
+    <div class="stats-group">
+      <div class="stat-pill money">
+        <span>💵</span>
+        <span id="money-display">150</span>
+        <span>جنيه</span>
+      </div>
+      <div class="stat-pill coins">
+        <span>🪙</span>
+        <span id="coins-display">25</span>
+        <span>كوين</span>
+      </div>
+      <div class="stat-pill counter">
+        <span>👥</span>
+        <span>الزبائن:</span>
+        <span id="served-counter">0</span>
+        <span>/</span>
+        <span id="next-milestone">50</span>
+      </div>
+      <div class="stat-pill place">
+        <span>🏪</span>
+        <span id="place-rank">عربية فول شعبية</span>
+      </div>
+    </div>
+
+    <div class="hud-actions">
+      <button class="hud-btn price-btn" onclick="openModal('price-modal')">🏷️ الأسعار</button>
+      <button class="hud-btn shop-btn" onclick="openModal('shop-modal')">🛒 الشوب</button>
+      <button class="hud-btn sound-btn" id="sound-toggle" onclick="toggleSound()">🔊 الصوت</button>
+      <button class="hud-btn pause-btn" id="pause-toggle-btn" onclick="togglePause()">⏸️ توقف</button>
+    </div>
+  </div>
+
+  <div class="look-hint">🖱️ اسحب بالماوس أو اصبعك يمين وشمال عشان تبص حوليك من جوه المكان!</div>
+
+  <!-- بطاقات الزبائن -->
+  <div class="customers-overlay" id="customers-area"></div>
+
+  <!-- لوحة التحكم السفلية -->
+  <div class="bottom-dock">
+    <div class="panel-box">
+      <div class="panel-title">
+        <span>📦 مخزن البضاعة</span>
+        <span style="font-size: 0.72rem; color: #a7f3d0;">متوفر</span>
+      </div>
+      <div class="inventory-grid" id="inventory-grid"></div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">
+        <span>🍳 حضّر الطلب بيدك (اضغط للتجهيز)</span>
+        <span style="font-size: 0.72rem; color: #34d399;">تنوع الأكلات</span>
+      </div>
+      <div class="menu-grid" id="menu-grid"></div>
+    </div>
+
+    <div class="panel-box">
+      <div class="panel-title">
+        <span>🍽️ صينية التقديم (سعة 5)</span>
+        <span id="tray-count" style="font-size: 0.76rem;">0 / 5</span>
+      </div>
+      <div class="ready-tray" id="ready-tray"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== شاشة التوقف المؤقت (PAUSE) ==================== -->
+<div id="pause-overlay">
+  <div class="pause-card">
+    <div style="font-size: 2.6rem; margin-bottom: 4px;">⏸️</div>
+    <h2 class="pause-title">اللعبة متوقفة مؤقتاً</h2>
+    <p class="pause-desc">الوقت والزبائن واقفين تماماً، وتقدمك محفوظ.</p>
+
+    <div class="save-code-box">
+      <div style="font-size: 0.82rem; color: #93c5fd; font-weight: 800;">
+        🔑 كود الحفظ (انسخه لو هتفتح اللعبة في نيو تاب أو جهاز تاني):
+      </div>
+      <input type="text" id="export-save-code" class="save-code-input" readonly onclick="this.select()">
+      <button class="copy-code-btn" onclick="copySaveCode()">📋 نسخ كود الحفظ</button>
+    </div>
+
+    <button class="resume-btn" onclick="togglePause()">▶️ استكمال اللعب</button>
+    <button class="save-exit-btn" onclick="returnToMainMenu()">💾 حفظ والعودة للقائمة الرئيسية</button>
+  </div>
+</div>
+
+<!-- ==================== نافذة إدخال كود الحفظ في Load Game ==================== -->
+<div id="import-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width: 480px; text-align: center;">
+    <div class="modal-header">
+      <h2 class="modal-title">📂 استرجاع اللعبة بكود الحفظ</h2>
+      <button class="close-modal" onclick="closeModal('import-modal')">إغلاق ✖</button>
+    </div>
+    <p style="font-size: 0.9rem; color: #e5e7eb; margin-bottom: 12px;">
+      لأنك فتحت نيو تاب جديد، الصق كود الحفظ اللي نسخته من المرة اللي فاتت هنا:
+    </p>
+    <input type="text" id="import-save-input" class="save-code-input" placeholder="الصق كود الحفظ هنا..." style="margin-bottom: 14px; padding: 10px;">
+    <button class="main-action-btn btn-load-game" onclick="loadFromPastedCode()">✅ تحميل تقدمي الآن</button>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- ==================== نافذة الشوب ==================== -->
+<div id="shop-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 class="modal-title">🛒 شوب البضاعة وتطوير المكان</h2>
+      <button class="close-modal" onclick="closeModal('shop-modal')">إغلاق ✖</button>
+    </div>
+
+    <div class="shop-section-title">🥖 شراء البضاعة والمكونات (بالجنيه المصري)</div>
+    <div class="shop-grid" id="shop-ingredients"></div>
+
+    <div class="shop-section-title">🚀 فتح أكلات جديدة (بالكوينات 🪙) - والمكان بيتطور تلقائياً كل 50 زبون!</div>
+    <div class="shop-grid" id="shop-upgrades"></div>
+  </div>
+</div>
+
+<!-- ==================== نافذة الأسعار ==================== -->
+<div id="price-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 class="modal-title">🏷️ تسعير السندوتشات والأكلات (بالجنيه)</h2>
+      <button class="close-modal" onclick="closeModal('price-modal')">حفظ وإغلاق ✔</button>
+    </div>
+    <div id="price-list"></div>
+  </div>
+</div>
+
+<script>
+  const SAVE_KEY = 'ful_legend_3d_save_v2';
+  let isPaused = false;
+  let worldInitialized = false;
+  let intervalsStarted = false;
+  let pendingImportedSave = null;
+
+  /* ==================== نظام الحفظ التلقائي + كود النقل ==================== */
+  function buildSaveObject() {
+    return {
+      m: gameState.money,
+      c: gameState.coins,
+      s: gameState.totalServed,
+      v: gameState.venueStage,
+      i: { ...gameState.inventory },
+      r: recipes.map(rec => ({ id: rec.id, p: rec.price, u: rec.unlocked ? 1 : 0 })),
+      t: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
+    };
+  }
+
+  function generateSaveCode() {
+    const obj = buildSaveObject();
+    return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+  }
+
+  function decodeSaveCode(codeStr) {
+    try {
+      const json = decodeURIComponent(escape(atob(codeStr.trim())));
+      const obj = JSON.parse(json);
+      if (typeof obj.m === 'number' && typeof obj.s === 'number') return obj;
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function saveGameProgress() {
+    const obj = buildSaveObject();
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(obj));
+    } catch (e) {}
+    const codeInput = document.getElementById('export-save-code');
+    if (codeInput) codeInput.value = generateSaveCode();
+  }
+
+  function getSavedData() {
+    if (pendingImportedSave) return pendingImportedSave;
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function copySaveCode() {
+    const input = document.getElementById('export-save-code');
+    input.value = generateSaveCode();
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+      playSound('cash');
+      showToast('✅ تم نسخ كود الحفظ! تقدر تلصقه في أي نيو تاب');
+    }).catch(() => {
+      document.execCommand('copy');
+      showToast('✅ تم نسخ كود الحفظ!');
+    });
+  }
+
+  function refreshLauncherSaveInfo() {
+    const saved = getSavedData();
+    const label = document.getElementById('save-status-label');
+    if (saved) {
+      label.innerText = `💾 يوجد حفظ جاهز: ${saved.m} جنيه | ${saved.s} زبون`;
+    } else {
+      label.innerText = `💡 لو معاك كود حفظ من تاب تاني، اختار جهازك ودوس Load Game للصقه!`;
+    }
+  }
+
+  /* ==================== المؤثرات الصوتية ==================== */
+  let audioCtx = null;
+  let soundEnabled = true;
+
+  function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    document.getElementById('sound-toggle').innerText = soundEnabled ? '🔊 الصوت' : '🔇 صامت';
+    if (soundEnabled) playSound('click');
+  }
+
+  function playSound(type) {
+    if (!soundEnabled) return;
+    initAudio();
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    if (type === 'click') {
+      osc.type = 'sine'; osc.frequency.setValueAtTime(540, now); osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
+      gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+      osc.start(now); osc.stop(now + 0.08);
+    } else if (type === 'cook') {
+      osc.type = 'triangle'; osc.frequency.setValueAtTime(260, now); osc.frequency.linearRampToValueAtTime(520, now + 0.14);
+      gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+      osc.start(now); osc.stop(now + 0.18);
+    } else if (type === 'cash') {
+      osc.type = 'sine'; osc.frequency.setValueAtTime(880, now); osc.frequency.setValueAtTime(1240, now + 0.08);
+      gain.gain.setValueAtTime(0.22, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+      osc.start(now); osc.stop(now + 0.28);
+    } else if (type === 'buy') {
+      osc.type = 'square'; osc.frequency.setValueAtTime(380, now); osc.frequency.setValueAtTime(570, now + 0.08);
+      gain.gain.setValueAtTime(0.12, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+      osc.start(now); osc.stop(now + 0.18);
+    } else if (type === 'angry') {
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(170, now); osc.frequency.linearRampToValueAtTime(110, now + 0.25);
+      gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+      osc.start(now); osc.stop(now + 0.25);
+    } else if (type === 'levelup') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(440, now); osc.frequency.setValueAtTime(554, now + 0.09);
+      osc.frequency.setValueAtTime(659, now + 0.18); osc.frequency.setValueAtTime(880, now + 0.27);
+      gain.gain.setValueAtTime(0.25, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
+      osc.start(now); osc.stop(now + 0.55);
+    }
+  }
+
+  /* ==================== قائمة الاستقبال (Start Game & Load Game) ==================== */
+  let selectedDevice = null;
+
+  function selectOS(osName, el) {
+    playSound('click');
+    selectedDevice = osName;
+    document.querySelectorAll('.os-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+
+    document.getElementById('start-game-btn').disabled = false;
+    document.getElementById('start-btn-text').innerText = `Start Game (بداية جديدة - ${osName})`;
+
+    const loadBtn = document.getElementById('load-game-btn');
+    loadBtn.disabled = false;
+    const saved = getSavedData();
+    document.getElementById('load-btn-text').innerText = saved
+      ? `Load Game (استكمال ${saved.m} جنيه - ${osName})`
+      : `Load Game (استكمال / لصق كود الحفظ)`;
+  }
+
+  function handleLoadGameClick() {
+    if (!selectedDevice) return;
+    const saved = getSavedData();
+    if (saved) {
+      launchSequence('load');
+    } else {
+      playSound('click');
+      document.getElementById('import-save-input').value = '';
+      document.getElementById('import-modal').style.display = 'flex';
+    }
+  }
+
+  function loadFromPastedCode() {
+    const code = document.getElementById('import-save-input').value;
+    const decoded = decodeSaveCode(code);
+    if (!decoded) {
+      playSound('angry');
+      showToast('❌ الكود غير صحيح! تأكد إنك نسخت كود الحفظ كامل');
+      return;
+    }
+    pendingImportedSave = decoded;
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(decoded)); } catch (e) {}
+    document.getElementById('import-modal').style.display = 'none';
+    launchSequence('load');
+  }
+
+  function launchSequence(mode) {
+    if (!selectedDevice) return;
+    playSound('buy');
+    document.getElementById('start-game-btn').disabled = true;
+    document.getElementById('load-game-btn').disabled = true;
+    document.getElementById('progress-container').style.display = 'block';
+
+    let percent = 0;
+    const fill = document.getElementById('progress-bar-fill');
+    const percentText = document.getElementById('download-percent');
+    const statusText = document.getElementById('download-status');
+
+    const interval = setInterval(() => {
+      percent += 25;
+      if (percent >= 100) {
+        percent = 100;
+        clearInterval(interval);
+        fill.style.width = '100%';
+        percentText.innerText = '100%';
+        statusText.innerText = mode === 'load' ? "جاري استرجاع تقدمك ومطعمك..." : "جاري بدء لعبة جديدة من الصفر...";
+        playSound('levelup');
+        setTimeout(() => {
+          document.getElementById('launcher-screen').style.display = 'none';
+          document.getElementById('progress-container').style.display = 'none';
+          document.getElementById('game-screen').style.display = 'block';
+          if (!worldInitialized) {
+            init3DWorld();
+            worldInitialized = true;
+          }
+          startGame(mode);
+        }, 450);
+      } else {
+        fill.style.width = percent + '%';
+        percentText.innerText = percent + '%';
+      }
+    }, 100);
+  }
+
+  /* ==================== التحكم في التوقف المؤقت (Pause / Resume) ==================== */
+  function togglePause() {
+    playSound('click');
+    isPaused = !isPaused;
+    const overlay = document.getElementById('pause-overlay');
+    const btn = document.getElementById('pause-toggle-btn');
+
+    if (isPaused) {
+      saveGameProgress();
+      document.getElementById('export-save-code').value = generateSaveCode();
+      overlay.style.display = 'flex';
+      btn.innerText = '▶️ كمل';
+    } else {
+      overlay.style.display = 'none';
+      btn.innerText = '⏸️ توقف';
+    }
+  }
+
+  function returnToMainMenu() {
+    playSound('click');
+    saveGameProgress();
+    isPaused = false;
+    document.getElementById('pause-overlay').style.display = 'none';
+    document.getElementById('pause-toggle-btn').innerText = '⏸️ توقف';
+    document.getElementById('game-screen').style.display = 'none';
+    document.getElementById('launcher-screen').style.display = 'flex';
+
+    if (selectedDevice) {
+      document.getElementById('start-game-btn').disabled = false;
+      document.getElementById('load-game-btn').disabled = false;
+      const saved = getSavedData();
+      if (saved) {
+        document.getElementById('load-btn-text').innerText = `Load Game (استكمال ${saved.m} جنيه - ${selectedDevice})`;
+      }
+    }
+    refreshLauncherSaveInfo();
+  }
+
+  /* ==================== الخامات (Textures) ==================== */
+  function createWoodTexture(base = '#78350f', stripe = '#92400e') {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = base; ctx.fillRect(0, 0, 256, 256);
+    for (let y = 0; y < 256; y += 10) {
+      ctx.fillStyle = y % 20 === 0 ? stripe : base;
+      ctx.fillRect(0, y, 256, 7);
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+  }
+
+  function createBrickTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#9a3412'; ctx.fillRect(0, 0, 256, 256);
+    for (let r = 0; r < 8; r++) {
+      const off = (r % 2) * 32;
+      for (let c = -1; c <= 4; c++) {
+        ctx.fillStyle = (r + c) % 2 === 0 ? '#b45309' : '#c2410c';
+        ctx.fillRect(c * 64 + off + 2, r * 32 + 2, 60, 28);
+      }
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(4, 3);
+    return tex;
+  }
+
+  function createTileTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        ctx.fillStyle = (x + y) % 2 === 0 ? '#f8fafc' : '#cbd5e1';
+        ctx.fillRect(x * 32, y * 32, 32, 32);
+      }
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(4, 4);
+    return tex;
+  }
+
+  function createAsphaltTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#334155'; ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 2500; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.12)';
+      ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(10, 10);
+    return tex;
+  }
+
+  function createBannerTexture(text, bg) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, 512, 128);
+    ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 10; ctx.strokeRect(6, 6, 500, 116);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 40px Cairo, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, 256, 64);
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  /* ==================== عالم الـ 3D ومنظور الشخص الأول ==================== */
+  let scene, camera, renderer;
+  let venueGroup, handsGroup, ladleMesh, steamParticles = [];
+  let activeCharacters = [];
+  let yaw = 0, pitch = -0.12;
+  let isDragging = false, prevX = 0, prevY = 0;
+  let cookAnimTimer = 0, serveAnimTimer = 0;
+
+  function init3DWorld() {
+    const container = document.getElementById('canvas-container');
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xffb870);
+    scene.fog = new THREE.FogExp2(0xffb870, 0.018);
+
+    camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 2.35, 1.35);
+    camera.rotation.order = 'YXZ';
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0xfff7ed, 0.8));
+    const sun = new THREE.DirectionalLight(0xffedd5, 1.0);
+    sun.position.set(6, 14, -8);
+    scene.add(sun);
+
+    const street = new THREE.Mesh(
+      new THREE.PlaneGeometry(60, 60),
+      new THREE.MeshStandardMaterial({ map: createAsphaltTexture(), roughness: 0.85 })
+    );
+    street.rotation.x = -Math.PI / 2;
+    scene.add(street);
+
+    const brickMat = new THREE.MeshStandardMaterial({ map: createBrickTexture(), roughness: 0.8 });
+    [
+      { x: -12, z: -14, w: 7, h: 14, d: 6 },
+      { x: -4, z: -16, w: 7, h: 16, d: 6 },
+      { x: 4, z: -16, w: 7, h: 15, d: 6 },
+      { x: 12, z: -14, w: 7, h: 13, d: 6 }
+    ].forEach(b => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.d), brickMat);
+      m.position.set(b.x, b.h / 2, b.z);
+      scene.add(m);
+
+      const wMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+      for (let wy = 3; wy < b.h - 2; wy += 3.2) {
+        const w1 = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.4, 0.2), wMat);
+        w1.position.set(b.x - 1.5, wy, b.z + b.d / 2 + 0.05);
+        scene.add(w1);
+        const w2 = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.4, 0.2), wMat);
+        w2.position.set(b.x + 1.5, wy, b.z + b.d / 2 + 0.05);
+        scene.add(w2);
+      }
+    });
+
+    const colors = [0xef4444, 0xf59e0b, 0x10b981, 0x3b82f6];
+    for (let i = -14; i <= 14; i += 1.1) {
+      const flag = new THREE.Mesh(
+        new THREE.ConeGeometry(0.32, 0.65, 3),
+        new THREE.MeshBasicMaterial({ color: colors[Math.abs(Math.round(i)) % colors.length] })
+      );
+      flag.rotation.x = Math.PI;
+      flag.position.set(i, 6.8 - Math.cos(i * 0.2) * 0.4, -7);
+      scene.add(flag);
+    }
+
+    venueGroup = new THREE.Group();
+    scene.add(venueGroup);
+    buildVenueStage(0);
+    buildFirstPersonHands();
+
+    container.addEventListener('mousedown', e => { if (!isPaused) { isDragging = true; prevX = e.clientX; prevY = e.clientY; } });
+    window.addEventListener('mouseup', () => isDragging = false);
+    window.addEventListener('mousemove', e => {
+      if (!isDragging || isPaused) return;
+      yaw -= (e.clientX - prevX) * 0.004;
+      pitch -= (e.clientY - prevY) * 0.003;
+      yaw = Math.max(-1.1, Math.min(1.1, yaw));
+      pitch = Math.max(-0.55, Math.min(0.35, pitch));
+      prevX = e.clientX; prevY = e.clientY;
+    });
+
+    container.addEventListener('touchstart', e => { if (!isPaused) { isDragging = true; prevX = e.touches[0].clientX; prevY = e.touches[0].clientY; } });
+    window.addEventListener('touchend', () => isDragging = false);
+    window.addEventListener('touchmove', e => {
+      if (!isDragging || isPaused) return;
+      yaw -= (e.touches[0].clientX - prevX) * 0.005;
+      pitch -= (e.touches[0].clientY - prevY) * 0.004;
+      yaw = Math.max(-1.1, Math.min(1.1, yaw));
+      pitch = Math.max(-0.55, Math.min(0.35, pitch));
+      prevX = e.touches[0].clientX; prevY = e.touches[0].clientY;
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate3D();
+  }
+
+  function buildVenueStage(stageIdx) {
+    while (venueGroup.children.length > 0) venueGroup.remove(venueGroup.children[0]);
+    steamParticles = [];
+
+    if (stageIdx === 0) {
+      const woodMat = new THREE.MeshStandardMaterial({ map: createWoodTexture('#78350f', '#92400e') });
+      const counter = new THREE.Mesh(new THREE.BoxGeometry(4.6, 1.35, 1.2), woodMat);
+      counter.position.set(0, 0.67, 0);
+      venueGroup.add(counter);
+
+      const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.35, 2.2), woodMat);
+      leftWall.position.set(-2.25, 0.67, 1.0);
+      venueGroup.add(leftWall);
+
+      const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.35, 2.2), woodMat);
+      rightWall.position.set(2.25, 0.67, 1.0);
+      venueGroup.add(rightWall);
+
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(4.9, 0.15, 2.8), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
+      roof.position.set(0, 3.35, 0.8);
+      venueGroup.add(roof);
+
+      const banner = new THREE.Mesh(
+        new THREE.BoxGeometry(4.6, 0.55, 0.1),
+        new THREE.MeshBasicMaterial({ map: createBannerTexture('عربية البرنس للفول السخن', '#b91c1c') })
+      );
+      banner.position.set(0, 3.1, -0.55);
+      venueGroup.add(banner);
+
+    } else if (stageIdx === 1) {
+      const kioskMat = new THREE.MeshStandardMaterial({ map: createWoodTexture('#1e3a8a', '#1d4ed8') });
+      const counter = new THREE.Mesh(new THREE.BoxGeometry(5.4, 1.4, 1.3), kioskMat);
+      counter.position.set(0, 0.7, 0);
+      venueGroup.add(counter);
+
+      const backWall = new THREE.Mesh(new THREE.BoxGeometry(5.6, 3.5, 0.2), kioskMat);
+      backWall.position.set(0, 1.75, 2.3);
+      venueGroup.add(backWall);
+
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(5.8, 0.2, 3.2), new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
+      roof.position.set(0, 3.55, 0.8);
+      venueGroup.add(roof);
+
+      const banner = new THREE.Mesh(
+        new THREE.BoxGeometry(5.4, 0.65, 0.12),
+        new THREE.MeshBasicMaterial({ map: createBannerTexture('كشك البرنس للفول والطعمية والبطاطس', '#1e40af') })
+      );
+      banner.position.set(0, 3.25, -0.75);
+      venueGroup.add(banner);
+
+    } else if (stageIdx === 2) {
+      const tileMat = new THREE.MeshStandardMaterial({ map: createTileTexture(), roughness: 0.3 });
+      const counter = new THREE.Mesh(new THREE.BoxGeometry(6.8, 1.45, 1.4), tileMat);
+      counter.position.set(0, 0.72, 0);
+      venueGroup.add(counter);
+
+      const wallMat = new THREE.MeshStandardMaterial({ map: createBrickTexture() });
+      const leftW = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.0, 4.0), wallMat);
+      leftW.position.set(-3.4, 2.0, 1.2);
+      venueGroup.add(leftW);
+
+      const rightW = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.0, 4.0), wallMat);
+      rightW.position.set(3.4, 2.0, 1.2);
+      venueGroup.add(rightW);
+
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.25, 4.2), new THREE.MeshStandardMaterial({ color: 0x065f46 }));
+      roof.position.set(0, 3.9, 1.1);
+      venueGroup.add(roof);
+
+      const banner = new THREE.Mesh(
+        new THREE.BoxGeometry(6.8, 0.75, 0.15),
+        new THREE.MeshBasicMaterial({ map: createBannerTexture('مطعم البرنس للمأكولات المصرية والكشري', '#047857') })
+      );
+      banner.position.set(0, 3.5, -0.95);
+      venueGroup.add(banner);
+
+    } else {
+      const marbleMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, metalness: 0.2, roughness: 0.2 });
+      const goldTrim = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.85, roughness: 0.2 });
+
+      const counter = new THREE.Mesh(new THREE.BoxGeometry(8.2, 1.45, 1.5), marbleMat);
+      counter.position.set(0, 0.72, 0);
+      venueGroup.add(counter);
+
+      const goldBar = new THREE.Mesh(new THREE.BoxGeometry(8.3, 0.15, 1.55), goldTrim);
+      goldBar.position.set(0, 1.45, 0);
+      venueGroup.add(goldBar);
+
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(8.6, 0.3, 4.5), new THREE.MeshStandardMaterial({ color: 0x7c2d12 }));
+      roof.position.set(0, 4.2, 1.1);
+      venueGroup.add(roof);
+
+      const banner = new THREE.Mesh(
+        new THREE.BoxGeometry(8.0, 0.85, 0.15),
+        new THREE.MeshBasicMaterial({ map: createBannerTexture('👑 سلسلة مطاعم البرنس العالمية 👑', '#991b1b') })
+      );
+      banner.position.set(0, 3.75, -1.1);
+      venueGroup.add(banner);
+    }
+
+    const potMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.85, roughness: 0.2 });
+    const pot = new THREE.Mesh(new THREE.SphereGeometry(0.45, 24, 24), potMat);
+    pot.position.set(-1.1, 1.65, 0.1);
+    venueGroup.add(pot);
+
+    const potTop = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.32, 0.35, 20), potMat);
+    potTop.position.set(-1.1, 2.05, 0.1);
+    venueGroup.add(potTop);
+
+    const plate = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.55, 0.45, 0.12, 24),
+      new THREE.MeshStandardMaterial({ color: 0xe5e7eb, metalness: 0.5 })
+    );
+    plate.position.set(0.9, 1.48, 0.1);
+    venueGroup.add(plate);
+
+    const steamMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45 });
+    for (let i = 0; i < 6; i++) {
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8), steamMat);
+      s.position.set(-1.1 + (Math.random() - 0.5) * 0.2, 2.25 + i * 0.18, 0.1);
+      venueGroup.add(s);
+      steamParticles.push(s);
+    }
+  }
+
+  function buildFirstPersonHands() {
+    handsGroup = new THREE.Group();
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xd99b66 });
+
+    const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.7, 12), skinMat);
+    rightArm.rotation.x = Math.PI / 3;
+    rightArm.position.set(0.55, -0.45, -0.7);
+    handsGroup.add(rightArm);
+
+    ladleMesh = new THREE.Group();
+    const handle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.02, 0.02, 0.65, 10),
+      new THREE.MeshStandardMaterial({ color: 0xd1d5db, metalness: 0.8 })
+    );
+    handle.rotation.x = Math.PI / 2.4;
+    handle.position.set(0.55, -0.35, -0.95);
+    ladleMesh.add(handle);
+
+    const scoop = new THREE.Mesh(
+      new THREE.SphereGeometry(0.09, 12, 12),
+      new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8 })
+    );
+    scoop.position.set(0.55, -0.42, -1.25);
+    ladleMesh.add(scoop);
+
+    handsGroup.add(ladleMesh);
+
+    const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.7, 12), skinMat);
+    leftArm.rotation.x = Math.PI / 3;
+    leftArm.position.set(-0.55, -0.45, -0.7);
+    handsGroup.add(leftArm);
+
+    camera.add(handsGroup);
+    scene.add(camera);
+  }
+
+  const characterArchetypes = [
+    { name: "عم عبده (جلباب)", bodyColor: 0x3b82f6, skinColor: 0xc68642, hatColor: 0xffffff, avatar: "🧔🏽‍♂️" },
+    { name: "مدام سعاد", bodyColor: 0x9333ea, skinColor: 0xe0ac69, hatColor: 0xf472b6, avatar: "🧕🏽" },
+    { name: "الأسطى بلية", bodyColor: 0xd97706, skinColor: 0x8d5524, hatColor: 0xfacc15, avatar: "👷🏽‍♂️" },
+    { name: "كابتن حودة", bodyColor: 0x10b981, skinColor: 0xf1c27d, hatColor: 0x111827, avatar: "🧑🏽‍🦱" },
+    { name: "الحاج محمود", bodyColor: 0x475569, skinColor: 0xd2996c, hatColor: 0xe2e8f0, avatar: "👴🏽" }
+  ];
+
+  function create3DCharacter(arch, slotX) {
+    const charGroup = new THREE.Group();
+    const skinMat = new THREE.MeshStandardMaterial({ color: arch.skinColor });
+    const bodyMat = new THREE.MeshStandardMaterial({ color: arch.bodyColor });
+
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.45, 1.3, 16), bodyMat);
+    torso.position.y = 1.25;
+    charGroup.add(torso);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 18, 18), skinMat);
+    head.position.y = 2.25;
+    charGroup.add(head);
+
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x111827 });
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
+    eyeL.position.set(-0.12, 2.28, 0.31);
+    charGroup.add(eyeL);
+
+    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
+    eyeR.position.set(0.12, 2.28, 0.31);
+    charGroup.add(eyeR);
+
+    const hat = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.36, 0.38, 0.22, 16),
+      new THREE.MeshStandardMaterial({ color: arch.hatColor })
+    );
+    hat.position.y = 2.52;
+    charGroup.add(hat);
+
+    const armGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.85, 10);
+    const leftArm = new THREE.Mesh(armGeo, bodyMat);
+    leftArm.position.set(-0.5, 1.4, 0);
+    charGroup.add(leftArm);
+
+    const rightArm = new THREE.Mesh(armGeo, bodyMat);
+    rightArm.position.set(0.5, 1.4, 0);
+    charGroup.add(rightArm);
+
+    const legGeo = new THREE.CylinderGeometry(0.11, 0.11, 0.7, 10);
+    const legMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+    const leftLeg = new THREE.Mesh(legGeo, legMat);
+    leftLeg.position.set(-0.18, 0.35, 0);
+    charGroup.add(leftLeg);
+
+    const rightLeg = new THREE.Mesh(legGeo, legMat);
+    rightLeg.position.set(0.18, 0.35, 0);
+    charGroup.add(rightLeg);
+
+    charGroup.position.set(slotX, 0, -9);
+    scene.add(charGroup);
+
+    return {
+      group: charGroup,
+      leftArm, rightArm, leftLeg, rightLeg,
+      targetZ: -1.65,
+      state: 'walking',
+      phase: Math.random() * 5
+    };
+  }
+
+  function animate3D() {
+    requestAnimationFrame(animate3D);
+
+    if (isPaused) {
+      renderer.render(scene, camera);
+      return;
+    }
+
+    const t = Date.now() * 0.005;
+    camera.rotation.y = yaw;
+    camera.rotation.x = pitch;
+
+    steamParticles.forEach(p => {
+      p.position.y += 0.01;
+      if (p.position.y > 3.3) p.position.y = 2.2;
+    });
+
+    if (cookAnimTimer > 0) {
+      cookAnimTimer -= 0.05;
+      ladleMesh.position.y = Math.sin(t * 6) * 0.12;
+      ladleMesh.rotation.z = Math.sin(t * 6) * 0.25;
+    } else {
+      ladleMesh.position.y = Math.sin(t * 0.6) * 0.015;
+      ladleMesh.rotation.z = 0;
+    }
+
+    if (serveAnimTimer > 0) {
+      serveAnimTimer -= 0.05;
+      handsGroup.position.z = -Math.sin(serveAnimTimer * Math.PI) * 0.35;
+    } else {
+      handsGroup.position.z = 0;
+    }
+
+    for (let i = activeCharacters.length - 1; i >= 0; i--) {
+      const ch = activeCharacters[i];
+      if (ch.state === 'walking') {
+        ch.group.position.z += 0.08;
+        ch.leftLeg.rotation.x = Math.sin(t * 2.5 + ch.phase) * 0.6;
+        ch.rightLeg.rotation.x = -Math.sin(t * 2.5 + ch.phase) * 0.6;
+        ch.leftArm.rotation.x = -Math.sin(t * 2.5 + ch.phase) * 0.4;
+        ch.rightArm.rotation.x = Math.sin(t * 2.5 + ch.phase) * 0.4;
+        if (ch.group.position.z >= ch.targetZ) {
+          ch.group.position.z = ch.targetZ;
+          ch.state = 'waiting';
+          ch.leftLeg.rotation.x = 0;
+          ch.rightLeg.rotation.x = 0;
+        }
+      } else if (ch.state === 'waiting') {
+        ch.group.position.y = Math.abs(Math.sin(t + ch.phase)) * 0.06;
+        ch.rightArm.rotation.z = -0.4 + Math.sin(t * 1.5 + ch.phase) * 0.25;
+      } else if (ch.state === 'leaving') {
+        ch.group.rotation.y = Math.PI;
+        ch.group.position.z -= 0.1;
+        ch.group.position.y = Math.abs(Math.sin(t * 3)) * 0.2;
+        ch.leftLeg.rotation.x = Math.sin(t * 3) * 0.7;
+        ch.rightLeg.rotation.x = -Math.sin(t * 3) * 0.7;
+        if (ch.group.position.z < -11) {
+          scene.remove(ch.group);
+          activeCharacters.splice(i, 1);
+        }
+      }
+    }
+
+    renderer.render(scene, camera);
+  }
+
+  /* ==================== بيانات اللعبة ==================== */
+  const defaultInventory = {
+    bread: 30,
+    fava: 25,
+    oil_tahini: 25,
+    falafel: 20,
+    potato: 15,
+    koshary_mix: 10,
+    shawarma: 10
+  };
+
+  const defaultRecipes = [
+    { id: 'ful_sada', name: 'سندوتش فول سادة', icon: '🥙', price: 12, unlocked: true, req: { bread: 1, fava: 1 } },
+    { id: 'ful_tahini', name: 'فول بالطحينة والزيت', icon: '🥣', price: 18, unlocked: true, req: { fava: 1, oil_tahini: 1 } },
+    { id: 'ful_alex', name: 'فول إسكندراني', icon: '🌶️', price: 22, unlocked: true, req: { bread: 1, oil_tahini: 1 } },
+    { id: 'taameya', name: 'سندوتش طعمية', icon: '🧆', price: 15, unlocked: true, req: { bread: 1, falafel: 1 } },
+    { id: 'mix_dynamite', name: 'سندوتش ديناميت', icon: '🔥', price: 28, unlocked: false, unlockCost: 20, req: { fava: 1, falafel: 1 } },
+    { id: 'potato_sand', name: 'سندوتش بطاطس', icon: '🍟', price: 25, unlocked: false, unlockCost: 30, req: { bread: 1, potato: 1 } },
+    { id: 'koshary_bowl', name: 'علبة كشري مصري', icon: '🍝', price: 45, unlocked: false, unlockCost: 50, req: { koshary_mix: 1 } },
+    { id: 'royal_meal', name: 'وجبة المطعم المشهور', icon: '🍖', price: 90, unlocked: false, unlockCost: 80, req: { shawarma: 1 } }
+  ];
+
+  let recipes = JSON.parse(JSON.stringify(defaultRecipes));
+
+  const gameState = {
+    money: 150,
+    coins: 25,
+    totalServed: 0,
+    venueStage: 0,
+    tray: [],
+    maxTray: 5,
+    customers: [],
+    inventory: { ...defaultInventory }
+  };
+
+  const venueNames = [
+    "عربية فول شعبية",
+    "كشك فول وطعمية متطور",
+    "مطعم شعبي في الحارة",
+    "سلسلة مطاعم البرنس VIP 👑"
+  ];
+
+  const ingredientMeta = [
+    { key: 'bread', name: 'عيش بلدي 🫓', pack: 20, cost: 10 },
+    { key: 'fava', name: 'فول مدمس 🍲', pack: 15, cost: 12 },
+    { key: 'oil_tahini', name: 'طحينة وخلطة 🥣', pack: 15, cost: 10 },
+    { key: 'falafel', name: 'عجينة طعمية 🧆', pack: 15, cost: 12 },
+    { key: 'potato', name: 'بطاطس 🍟', pack: 12, cost: 15 },
+    { key: 'koshary_mix', name: 'مكونات كشري 🍝', pack: 10, cost: 20 },
+    { key: 'shawarma', name: 'مشويات 🥙', pack: 10, cost: 25 }
+  ];
+
+  function showToast(msg) {
+    const container = document.getElementById('toast-container');
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.innerText = msg;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 2300);
+  }
+
+  function updateHUD() {
+    document.getElementById('money-display').innerText = gameState.money;
+    document.getElementById('coins-display').innerText = gameState.coins;
+    document.getElementById('served-counter').innerText = gameState.totalServed;
+
+    const nextGoal = (Math.floor(gameState.totalServed / 50) + 1) * 50;
+    document.getElementById('next-milestone').innerText = nextGoal;
+
+    const newStage = Math.min(3, Math.floor(gameState.totalServed / 50));
+    if (newStage !== gameState.venueStage) {
+      gameState.venueStage = newStage;
+      playSound('levelup');
+      buildVenueStage(newStage);
+      showToast(`🎉 وصلت لـ ${gameState.totalServed} زبون! المكان اتغير إلى: ${venueNames[newStage]}`);
+    }
+    document.getElementById('place-rank').innerText = venueNames[gameState.venueStage];
+  }
+
+  function renderInventory() {
+    const grid = document.getElementById('inventory-grid');
+    grid.innerHTML = '';
+    ingredientMeta.forEach(item => {
+      const count = gameState.inventory[item.key];
+      const div = document.createElement('div');
+      div.className = 'inv-item';
+      div.innerHTML = `
+        <span>${item.name}</span>
+        <span class="inv-count" style="background:${count === 0 ? '#ef4444' : '#f59e0b'}; color:${count === 0 ? '#fff' : '#1a120b'}">${count}</span>
+      `;
+      grid.appendChild(div);
+    });
+  }
+
+  function renderMenu() {
+    const grid = document.getElementById('menu-grid');
+    grid.innerHTML = '';
+    recipes.forEach(rec => {
+      const div = document.createElement('div');
+      div.className = 'food-card' + (rec.unlocked ? '' : ' locked');
+
+      const reqNames = Object.entries(rec.req).map(([k, v]) => {
+        const meta = ingredientMeta.find(m => m.key === k);
+        return `${meta.name.split(' ')[0]} (${v})`;
+      }).join(' + ');
+
+      div.innerHTML = `
+        <div class="food-top">
+          <span>${rec.icon} ${rec.name}</span>
+          <span class="food-price-tag">${rec.unlocked ? rec.price + ' ج' : '🔒 مقفول'}</span>
+        </div>
+        <div class="food-req">${rec.unlocked ? 'يحتاج: ' + reqNames : 'افتحه بـ ' + rec.unlockCost + ' 🪙'}</div>
+      `;
+
+      if (rec.unlocked) div.onclick = () => prepareFood(rec);
+      grid.appendChild(div);
+    });
+  }
+
+  function renderTray() {
+    const trayEl = document.getElementById('ready-tray');
+    document.getElementById('tray-count').innerText = `${gameState.tray.length} / ${gameState.maxTray}`;
+    trayEl.innerHTML = '';
+
+    if (gameState.tray.length === 0) {
+      trayEl.innerHTML = `<div style="color:#9ca3af; font-size:0.8rem; text-align:center; margin-top:12px;">اضغط على أي أكلة لتحضيرها بالمغرفة!</div>`;
+      return;
+    }
+
+    gameState.tray.forEach((item, idx) => {
+      const div = document.createElement('div');
+      div.className = 'tray-slot';
+      div.innerHTML = `
+        <span>${item.icon} ${item.name} (${item.price} ج)</span>
+        <button class="trash-btn" onclick="removeFromTray(${idx})">حذف</button>
+      `;
+      trayEl.appendChild(div);
+    });
+  }
+
+  function prepareFood(recipe) {
+    if (isPaused) return;
+    if (gameState.tray.length >= gameState.maxTray) {
+      playSound('angry');
+      showToast('⚠️ الصينية مليانة! قدّم الطلبات للزبائن');
+      return;
+    }
+
+    for (const [key, amount] of Object.entries(recipe.req)) {
+      if (gameState.inventory[key] < amount) {
+        playSound('angry');
+        const meta = ingredientMeta.find(m => m.key === key);
+        showToast(`❌ ناقصك ${meta.name}! اشترِ من الشوب`);
+        return;
+      }
+    }
+
+    for (const [key, amount] of Object.entries(recipe.req)) {
+      gameState.inventory[key] -= amount;
+    }
+
+    gameState.tray.push({ ...recipe });
+    cookAnimTimer = 0.8;
+    playSound('cook');
+    renderInventory();
+    renderTray();
+    saveGameProgress();
+  }
+
+  function removeFromTray(index) {
+    if (isPaused) return;
+    playSound('click');
+    gameState.tray.splice(index, 1);
+    renderTray();
+  }
+
+  const slotsX = [-1.65, -0.55, 0.55, 1.65];
+
+  function spawnCustomer() {
+    if (isPaused || gameState.customers.length >= 4) return;
+    const unlockedRecipes = recipes.filter(r => r.unlocked);
+    const wanted = unlockedRecipes[Math.floor(Math.random() * unlockedRecipes.length)];
+    const arch = characterArchetypes[Math.floor(Math.random() * characterArchetypes.length)];
+
+    const usedSlots = gameState.customers.map(c => c.slotIndex);
+    let slotIndex = 0;
+    for (let i = 0; i < 4; i++) {
+      if (!usedSlots.includes(i)) { slotIndex = i; break; }
+    }
+
+    const char3D = create3DCharacter(arch, slotsX[slotIndex]);
+
+    gameState.customers.push({
+      id: Date.now() + Math.random(),
+      slotIndex: slotIndex,
+      name: arch.name,
+      avatar: arch.avatar,
+      wanted: wanted,
+      patience: 100,
+      char3D: char3D
+    });
+    renderCustomers();
+  }
+
+  function renderCustomers() {
+    const area = document.getElementById('customers-area');
+    area.innerHTML = '';
+
+    gameState.customers.forEach(cust => {
+      const currentRecipe = recipes.find(r => r.id === cust.wanted.id);
+      const card = document.createElement('div');
+      card.className = 'customer-card';
+      card.innerHTML = `
+        <div class="cust-header">
+          <span style="font-size:1.4rem;">${cust.avatar}</span>
+          <span>${cust.name}</span>
+        </div>
+        <div class="cust-order-box">${currentRecipe.icon} ${currentRecipe.name}</div>
+        <div class="patience-bar">
+          <div class="patience-fill" id="pat-${cust.id}" style="width:${cust.patience}%; background:${cust.patience < 30 ? '#ef4444' : '#10b981'}"></div>
+        </div>
+        <button class="serve-btn" onclick="serveCustomer(${cust.id})">تقديم (${currentRecipe.price} ج) ✅</button>
+      `;
+      area.appendChild(card);
+    });
+  }
+
+  function serveCustomer(custId) {
+    if (isPaused) return;
+    const custIdx = gameState.customers.findIndex(c => c.id === custId);
+    if (custIdx === -1) return;
+    const cust = gameState.customers[custIdx];
+
+    const trayIdx = gameState.tray.findIndex(t => t.id === cust.wanted.id);
+    if (trayIdx === -1) {
+      playSound('angry');
+      showToast(`💡 اضغط على "${cust.wanted.name}" تحت عشان تجهزه الأول!`);
+      return;
+    }
+
+    const currentRecipe = recipes.find(r => r.id === cust.wanted.id);
+
+    serveAnimTimer = 0.7;
+    cust.char3D.state = 'leaving';
+    activeCharacters.push(cust.char3D);
+
+    gameState.tray.splice(trayIdx, 1);
+    gameState.customers.splice(custIdx, 1);
+
+    const earnedMoney = currentRecipe.price;
+    const earnedCoins = Math.max(4, Math.floor(earnedMoney / 3));
+
+    gameState.money += earnedMoney;
+    gameState.coins += earnedCoins;
+    gameState.totalServed += 1;
+
+    playSound('cash');
+    showToast(`💵 +${earnedMoney} جنيه | +${earnedCoins} 🪙 | زبون #${gameState.totalServed}`);
+
+    updateHUD();
+    renderTray();
+    renderCustomers();
+    saveGameProgress();
+  }
+
+  function openModal(id) {
+    if (isPaused) return;
+    playSound('click');
+    if (id === 'shop-modal') renderShop();
+    if (id === 'price-modal') renderPriceEditor();
+    document.getElementById(id).style.display = 'flex';
+  }
+
+  function closeModal(id) {
+    playSound('click');
+    document.getElementById(id).style.display = 'none';
+    renderMenu();
+    renderCustomers();
+    saveGameProgress();
+  }
+
+  function renderShop() {
+    const ingContainer = document.getElementById('shop-ingredients');
+    ingContainer.innerHTML = '';
+
+    ingredientMeta.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'shop-item';
+      div.innerHTML = `
+        <div>
+          <div style="font-weight:800;">${item.name}</div>
+          <div style="font-size:0.78rem; color:#d1d5db;">الكمية: +${item.pack}</div>
+        </div>
+        <button class="buy-btn" onclick="buyIngredient('${item.key}')">${item.cost} جنيه</button>
+      `;
+      ingContainer.appendChild(div);
+    });
+
+    const upgContainer = document.getElementById('shop-upgrades');
+    upgContainer.innerHTML = '';
+
+    recipes.filter(r => !r.unlocked).forEach(rec => {
+      const div = document.createElement('div');
+      div.className = 'shop-item';
+      div.innerHTML = `
+        <div>
+          <div style="font-weight:800;">فتح: ${rec.icon} ${rec.name}</div>
+          <div style="font-size:0.78rem; color:#fcd34d;">يزود أرباحك</div>
+        </div>
+        <button class="buy-btn" style="background:#10b981; color:#fff;" onclick="unlockRecipe('${rec.id}')">${rec.unlockCost} 🪙</button>
+      `;
+      upgContainer.appendChild(div);
+    });
+
+    if (upgContainer.innerHTML === '') {
+      upgContainer.innerHTML = `<div style="color:#34d399; font-weight:800;">🎉 فتحت كل الأكلات بنجاح!</div>`;
+    }
+  }
+
+  function buyIngredient(key) {
+    const item = ingredientMeta.find(m => m.key === key);
+    if (gameState.money < item.cost) {
+      playSound('angry');
+      showToast('❌ معكش جنيهات كفاية!');
+      return;
+    }
+    gameState.money -= item.cost;
+    gameState.inventory[key] += item.pack;
+    playSound('buy');
+    showToast(`✅ اشتريت +${item.pack} ${item.name}`);
+    updateHUD();
+    renderInventory();
+    saveGameProgress();
+  }
+
+  function unlockRecipe(id) {
+    const rec = recipes.find(r => r.id === id);
+    if (gameState.coins < rec.unlockCost) {
+      playSound('angry');
+      showToast('❌ محتاج كوينات 🪙 أكتر!');
+      return;
+    }
+    gameState.coins -= rec.unlockCost;
+    rec.unlocked = true;
+    playSound('levelup');
+    showToast(`🔥 تم فتح "${rec.name}" بنجاح!`);
+    updateHUD();
+    renderShop();
+    renderMenu();
+    saveGameProgress();
+  }
+
+  function renderPriceEditor() {
+    const list = document.getElementById('price-list');
+    list.innerHTML = '';
+    recipes.filter(r => r.unlocked).forEach(rec => {
+      const row = document.createElement('div');
+      row.className = 'price-row';
+      row.innerHTML = `
+        <div style="font-weight:800;">${rec.icon} ${rec.name}</div>
+        <div class="price-controls">
+          <button class="adj-btn" onclick="changePrice('${rec.id}', -5)">-</button>
+          <span style="font-weight:900; color:#34d399; min-width:70px; text-align:center;">${rec.price} جنيه</span>
+          <button class="adj-btn" onclick="changePrice('${rec.id}', 5)">+</button>
+        </div>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  function changePrice(id, delta) {
+    playSound('click');
+    const rec = recipes.find(r => r.id === id);
+    rec.price = Math.max(5, Math.min(250, rec.price + delta));
+    renderPriceEditor();
+    saveGameProgress();
+  }
+
+  function clearAllCharacters() {
+    gameState.customers.forEach(c => {
+      if (c.char3D && c.char3D.group) scene.remove(c.char3D.group);
+    });
+    activeCharacters.forEach(ch => {
+      if (ch.group) scene.remove(ch.group);
+    });
+    gameState.customers = [];
+    activeCharacters = [];
+  }
+
+  function startGame(mode) {
+    isPaused = false;
+    clearAllCharacters();
+    gameState.tray = [];
+
+    if (mode === 'load') {
+      const saved = getSavedData();
+      if (saved) {
+        gameState.money = saved.m;
+        gameState.coins = saved.c;
+        gameState.totalServed = saved.s;
+        gameState.venueStage = saved.v || Math.min(3, Math.floor(saved.s / 50));
+        gameState.inventory = { ...defaultInventory, ...saved.i };
+
+        if (saved.r) {
+          saved.r.forEach(sr => {
+            const target = recipes.find(r => r.id === sr.id);
+            if (target) {
+              target.price = sr.p;
+              target.unlocked = sr.u === 1;
+            }
+          });
+        }
+        buildVenueStage(gameState.venueStage);
+        showToast(`📂 تم تحميل حفظك (${gameState.money} جنيه)!`);
+      }
+    } else {
+      pendingImportedSave = null;
+      gameState.money = 150;
+      gameState.coins = 25;
+      gameState.totalServed = 0;
+      gameState.venueStage = 0;
+      gameState.inventory = { ...defaultInventory };
+      recipes = JSON.parse(JSON.stringify(defaultRecipes));
+      buildVenueStage(0);
+      saveGameProgress();
+      showToast('🚀 بدأت مغامرة جديدة من الصفر!');
+    }
+
+    updateHUD();
+    renderInventory();
+    renderMenu();
+    renderTray();
+    renderCustomers();
+    spawnCustomer();
+
+    if (!intervalsStarted) {
+      intervalsStarted = true;
+
+      setInterval(() => {
+        if (!isPaused) spawnCustomer();
+      }, 5500);
+
+      setInterval(() => {
+        if (isPaused) return;
+        for (let i = gameState.customers.length - 1; i >= 0; i--) {
+          const c = gameState.customers[i];
+          c.patience -= 0.55;
+          const bar = document.getElementById(`pat-${c.id}`);
+          if (bar) {
+            bar.style.width = Math.max(0, c.patience) + '%';
+            if (c.patience < 30) bar.style.background = '#ef4444';
+          }
+          if (c.patience <= 0) {
+            c.char3D.state = 'leaving';
+            activeCharacters.push(c.char3D);
+            gameState.customers.splice(i, 1);
+            playSound('angry');
+            showToast(`😤 ${c.name} مشي بعد انتظار طويل!`);
+            renderCustomers();
+          }
+        }
+      }, 500);
+    }
+  }
+
+  refreshLauncherSaveInfo();
+</script>
+</body>
+</html>
